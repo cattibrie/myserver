@@ -1,8 +1,10 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"net/http"
+	"strconv"
 	"sync/atomic"
 )
 
@@ -30,13 +32,34 @@ func resHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		nv := atomic.LoadInt64(&v)
 		fmt.Fprintf(w, "Value v = %d", nv)
+		return
+	}
+	w.WriteHeader(http.StatusMethodNotAllowed)
+}
+
+func setHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		sval := r.URL.Query().Get("value")
+		val, err := strconv.ParseInt(sval, 10, 64)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintf(w, "Invalid value argument: %v", err)
+			return
+		}
+		atomic.StoreInt64(&v, val)
+		return
 	}
 	w.WriteHeader(http.StatusMethodNotAllowed)
 }
 
 func main() {
+	numPtr := flag.Int64("i", 0, "an int64 value v")
+	portPtr := flag.String("p", ":8080", "port number, string value")
+	flag.Parse()
+	v = *numPtr
 	http.HandleFunc("/add", addHandler)
 	http.HandleFunc("/dec", decHandler)
 	http.HandleFunc("/result", resHandler)
-	http.ListenAndServe(":8080", nil)
+	http.HandleFunc("/set", setHandler)
+	http.ListenAndServe(*portPtr, nil)
 }
