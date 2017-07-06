@@ -3,14 +3,15 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"sync/atomic"
 )
 
-var v int
+var v int64
 
 func addHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
-		v++
-		fmt.Fprintf(w, "Value v = %d", v)
+		nv := atomic.AddInt64(&v, 1)
+		fmt.Fprintf(w, "Value v = %d", nv)
 		return
 	}
 	w.WriteHeader(http.StatusMethodNotAllowed)
@@ -18,8 +19,8 @@ func addHandler(w http.ResponseWriter, r *http.Request) {
 
 func decHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
-		v--
-		fmt.Fprintf(w, "Value v = %d", v)
+		nv := atomic.AddInt64(&v, -1)
+		fmt.Fprintf(w, "Value v = %d", nv)
 		return
 	}
 	w.WriteHeader(http.StatusMethodNotAllowed)
@@ -27,7 +28,8 @@ func decHandler(w http.ResponseWriter, r *http.Request) {
 
 func resHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
-		fmt.Fprintf(w, "Value v = %d", v)
+		nv := atomic.LoadInt64(&v)
+		fmt.Fprintf(w, "Value v = %d", nv)
 	}
 	w.WriteHeader(http.StatusMethodNotAllowed)
 }
