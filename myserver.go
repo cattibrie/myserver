@@ -2,64 +2,20 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"net/http"
-	"strconv"
-	"sync/atomic"
+
+	"github.com/catti_brie/examples/myserver/myhandler"
 )
-
-var v int64
-
-func addHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
-		nv := atomic.AddInt64(&v, 1)
-		fmt.Fprintf(w, "Value v = %d", nv)
-		return
-	}
-	w.WriteHeader(http.StatusMethodNotAllowed)
-}
-
-func decHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
-		nv := atomic.AddInt64(&v, -1)
-		fmt.Fprintf(w, "Value v = %d", nv)
-		return
-	}
-	w.WriteHeader(http.StatusMethodNotAllowed)
-}
-
-func resHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodGet {
-		nv := atomic.LoadInt64(&v)
-		fmt.Fprintf(w, "Value v = %d", nv)
-		return
-	}
-	w.WriteHeader(http.StatusMethodNotAllowed)
-}
-
-func setHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
-		sval := r.URL.Query().Get("value")
-		val, err := strconv.ParseInt(sval, 10, 64)
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			fmt.Fprintf(w, "Invalid value argument: %v", err)
-			return
-		}
-		atomic.StoreInt64(&v, val)
-		return
-	}
-	w.WriteHeader(http.StatusMethodNotAllowed)
-}
 
 func main() {
 	numPtr := flag.Int64("i", 0, "an int64 value v")
 	portPtr := flag.String("p", ":8080", "port number, string value")
 	flag.Parse()
-	v = *numPtr
-	http.HandleFunc("/add", addHandler)
-	http.HandleFunc("/dec", decHandler)
-	http.HandleFunc("/result", resHandler)
-	http.HandleFunc("/set", setHandler)
+	myhandler.V = *numPtr
+	s := S{V: *numPtr}
+	http.HandleFunc("/add", s.AddHandler)
+	http.HandleFunc("/dec", myhandler.DecHandler)
+	http.HandleFunc("/result", myhandler.ResHandler)
+	http.HandleFunc("/set", myhandler.SetHandler)
 	http.ListenAndServe(*portPtr, nil)
 }
